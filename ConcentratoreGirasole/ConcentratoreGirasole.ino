@@ -21,14 +21,21 @@ const int pinAnalogHorizontalSensor = A0;
 const int pinAnalogVerticalSensor = A1;
 const int threshold = 50; // soglia di inattività
 
-const int pinHorizontalMotorDirection = 3;
-const int pinHorizontalMotorStart = 4;
-const int pinVerticalMotorDirection = 5;
-const int pinVerticalMotorStart = 6;
+const int pinMotorSelector = 3;
+const int pinMotorDirection = 4;
+const int pinMotorStart = 5;
 const int motorStep = 100; // tempo di alimentazione dei motori
 
-const int pinVerticalEnd = 7;
-const int pinButton = 8;
+const int pinVerticalEnd = 6;
+const int pinButton = 7;
+
+// Costanti per il conmando dei motori
+const int MOTOR_HORIZONTAL = 0;
+const int MOTOR_VERTICAL = 1;
+
+const int FORWARDS = 1;
+const int STOP = 0;
+const int BACKWARDS = -1;
 
 bool started = false;
 int buttonValue = LOW;
@@ -38,12 +45,11 @@ SolarTracker tracker(pinAnalogHorizontalSensor, pinAnalogVerticalSensor, thresho
 
 void setup()
 { 
-  pinMode(pinHorizontalMotorDirection, OUTPUT);
-  pinMode(pinHorizontalMotorStart, OUTPUT); 
-  pinMode(pinVerticalMotorDirection, OUTPUT);
-  pinMode(pinVerticalMotorStart, OUTPUT);
+  pinMode(pinMotorSelector, OUTPUT);
+  pinMode(pinMotorDirection, OUTPUT); 
+  pinMode(pinMotorStart, OUTPUT);
 
-  pinMode(endVerticalPin, INPUT);
+  pinMode(pinVerticalEnd, INPUT);
   pinMode(pinButton, INPUT);
 }
 
@@ -70,8 +76,8 @@ void loop()
   if(started)
   {
     SolarTracker::Data data = tracker.track();
-    move(pinHorizontalMotorStart, pinHorizontalMotorDirection, data.horizontalDirection);
-    move(pinVerticalMotorStart, pinVerticalMotorDirection, data.verticalDirection);
+    move(MOTOR_HORIZONTAL, data.horizontalDirection);
+    move(MOTOR_VERTICAL, data.verticalDirection);
   }
 }
 
@@ -81,7 +87,7 @@ void start()
   SolarTracker::Data data = tracker.track();
   while(data.horizontalDirection == 0 && data.verticalDirection == 0)
   {
-    move(pinHorizontalMotorStart, pinHorizontalMotorDirection, 1);
+    move(MOTOR_HORIZONTAL, FORWARDS);
     data = tracker.track();
   }
   started = true;
@@ -93,19 +99,31 @@ void stop()
   started = false;
   while(digitalRead(pinVerticalEnd) == LOW)
   {
-    move(pinVerticalMotorStart, pinVerticalMotorDirection, -1);
+    move(MOTOR_VERTICAL, BACKWARDS);
   }
 }
 
 // Muove il servo nella direzione voluta per il tempo indicato in motorStep
+// motor:
+//    0 = Horizontal
+//    1 = Vertical
 // direction:
 //    1 = avanti
 //    0 = fermo
 //   -1 = indietro
-void move(int pinMotorStart, int pinMotorDirection, int direction)
+void move(int motor, int direction)
 {
   if(direction != 0)
   {
+    if(motor == MOTOR_HORIZONTAL)
+    {
+      digitalWrite(pinMotorSelector, LOW);
+    }
+    else
+    {
+      digitalWrite(pinMotorSelector, HIGH);
+    }
+    
     if(direction > 0)
     {
       digitalWrite(pinMotorDirection, HIGH);
@@ -114,6 +132,7 @@ void move(int pinMotorStart, int pinMotorDirection, int direction)
     {
       digitalWrite(pinMotorDirection, LOW);
     }
+    delay(50);
     digitalWrite(pinMotorStart, HIGH);
     delay(motorStep);
     digitalWrite(pinMotorStart, LOW);
