@@ -136,5 +136,7 @@ void move(int motor, int direction)
     digitalWrite(pinMotorStart, HIGH);
     delay(motorStep);
     digitalWrite(pinMotorStart, LOW);
+    digitalWrite(pinMotorDirection, LOW);
+    digitalWrite(pinMotorSelector, LOW);
   }
 }
