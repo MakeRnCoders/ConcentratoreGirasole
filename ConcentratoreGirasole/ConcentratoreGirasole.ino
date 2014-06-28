@@ -24,7 +24,7 @@ const int threshold = 50; // soglia di inattività
 const int pinMotorSelector = 3;
 const int pinMotorDirection = 4;
 const int pinMotorStart = 5;
-const int motorStep = 100; // tempo di alimentazione dei motori
+const int motorStep = 200; // tempo di alimentazione dei motori
 
 const int pinVerticalEnd = 6;
 const int pinButton = 7;
@@ -40,13 +40,20 @@ const int BACKWARDS = -1;
 bool started = false;
 int buttonValue = LOW;
 
-// sensore 
+const int DEBUG = false;
+
+// sensore
 SolarTracker tracker(pinAnalogHorizontalSensor, pinAnalogVerticalSensor, threshold);
 
 void setup()
-{ 
+{
+  if(DEBUG)
+  {
+    Serial.begin(9600);
+  }
+  
   pinMode(pinMotorSelector, OUTPUT);
-  pinMode(pinMotorDirection, OUTPUT); 
+  pinMode(pinMotorDirection, OUTPUT);
   pinMode(pinMotorStart, OUTPUT);
 
   pinMode(pinVerticalEnd, INPUT);
@@ -77,18 +84,36 @@ void loop()
   {
     SolarTracker::Data data = tracker.track();
     move(MOTOR_HORIZONTAL, data.horizontalDirection);
-    move(MOTOR_VERTICAL, data.verticalDirection);
+    if(data.horizontalDirection == STOP)
+    {
+      move(MOTOR_VERTICAL, data.verticalDirection);
+    }
+    
+    if(DEBUG)
+    {
+      Serial.println("Sensor value - horizontal: " + String(data.horizontalDirection) + " vertical: " + String(data.verticalDirection));
+    }
   }
 }
 
 // ruota l'asse orrizzontale fino a trovare il sole
 void start()
 {
+  if(DEBUG)
+  {
+    Serial.println("Starting");
+  }
+  
   SolarTracker::Data data = tracker.track();
-  while(data.horizontalDirection == 0 && data.verticalDirection == 0)
+  while(data.horizontalDirection == STOP && data.verticalDirection == STOP)
   {
     move(MOTOR_HORIZONTAL, FORWARDS);
     data = tracker.track();
+  }
+  
+  if(DEBUG)
+  {
+    Serial.println("Started");
   }
   started = true;
 }
@@ -96,21 +121,31 @@ void start()
 // posizione l'asse verticale sullo 0 (finecorsa)
 void stop()
 {
+  if(DEBUG)
+  {
+    Serial.println("Stopping");
+  }
+  
   started = false;
   while(digitalRead(pinVerticalEnd) == LOW)
   {
     move(MOTOR_VERTICAL, BACKWARDS);
   }
+  
+  if(DEBUG)
+  {
+    Serial.println("Stopped");
+  }
 }
 
 // Muove il servo nella direzione voluta per il tempo indicato in motorStep
 // motor:
-//    0 = Horizontal
-//    1 = Vertical
+// 0 = Horizontal
+// 1 = Vertical
 // direction:
-//    1 = avanti
-//    0 = fermo
-//   -1 = indietro
+// 1 = avanti
+// 0 = fermo
+// -1 = indietro
 void move(int motor, int direction)
 {
   if(direction != 0)
@@ -132,7 +167,7 @@ void move(int motor, int direction)
     {
       digitalWrite(pinMotorDirection, LOW);
     }
-    delay(50);
+    delay(5);
     digitalWrite(pinMotorStart, HIGH);
     delay(motorStep);
     digitalWrite(pinMotorStart, LOW);
